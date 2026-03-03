@@ -2,6 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
+const loadRoutes = require("./helpers/routeLoader");
 const morgan = require('morgan');
 const cors = require("cors");
 const chalk = require('chalk');
@@ -38,8 +39,22 @@ app.use(morgan((tokens, req, res) => {
     ].join(' ');
 }));
 
-app.get("/",(req,res) => {
-    res.send("Welcome to Event Management API");
+loadRoutes(app);
+
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "Route Not Found",
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
 });
 
 module.exports = app;
