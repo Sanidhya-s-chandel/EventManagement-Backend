@@ -1,4 +1,4 @@
-const Response = require("@helpers/response");
+const Response = require("@helpers/response.helper");
 
 const globalErrorHandler = (err, req, res, next) => {
 
