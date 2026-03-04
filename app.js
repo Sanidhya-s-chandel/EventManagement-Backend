@@ -2,6 +2,8 @@ const express = require("express");
 const passport = require("passport");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
+const notFound = require("./middlewares/notFound.middleware");
+const globalErrorHandler = require("./middlewares/error.middleware");
 const loadRoutes = require("./helpers/routeLoader");
 const morgan = require('morgan');
 const cors = require("cors");
@@ -41,20 +43,7 @@ app.use(morgan((tokens, req, res) => {
 
 loadRoutes(app);
 
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: "Route Not Found",
-  });
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
+app.use(notFound);
+app.use(globalErrorHandler);
 
 module.exports = app;
