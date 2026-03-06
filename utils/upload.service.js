@@ -6,7 +6,7 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
         return {
-            folder: 'mehadiProfileImages',
+            folder: 'Event-Management/Profiles',
             allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
             resource_type: 'image',
             transformation: [

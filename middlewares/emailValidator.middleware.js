@@ -10,7 +10,7 @@ function lowercaseEmailMiddleware(req, res, next) {
     return res.status(400).json({ error: "Email must be a string" });
   };
 
-  const normalizedEmail = email.toLowerCase();
+  const normalizedEmail = email.toLowerCase().trim();
 
   // Basic email format validation using regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
