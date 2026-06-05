@@ -8,13 +8,24 @@ const { User } = require("@models/index.model");
 const { sendEmail } = require("@utils/email.service");
 
 module.exports.signUpController = catchAsyncError(async (req, res) => {
-    const { firstName, email, phone, dob } = req.body;
+    const { firstName, email, phone, dob, addressLine1, addressLine2, country, city, state, pinCode } = req.body;
 
     console.log(`Creating the user with Name: ${firstName}`);
 
     if (!firstName || !email || !phone) {
         throw new AppError("First name, email, and phone are required", 400);
     };
+
+    const addressObj = {
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        country,
+        pinCode
+    };
+
+    console.log("Build up for addressObj :",addressObj);
 
     const [existingUser, newUserId] = await Promise.all([
         User.findOne({ email: email.toLowerCase() }).select("_id").lean(),
@@ -51,6 +62,7 @@ module.exports.signUpController = catchAsyncError(async (req, res) => {
         email: email.toLowerCase(),
         phone,
         profileImage,
+        address: addressObj,
         otp,
         otpExpirationTime,
         userId: newUserId,
@@ -173,6 +185,15 @@ module.exports.loginController = catchAsyncError(async (req, res) => {
     );
 
     console.log("JWT token generated for login.");
+    console.log("Generating refresh token...");
+
+    const refreshToken = jwt.sign(
+        {
+            id: user.userId
+        },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: "7d" }
+    );
 
     res.cookie("token", token, {
         httpOnly: true,
@@ -181,21 +202,35 @@ module.exports.loginController = catchAsyncError(async (req, res) => {
         maxAge: 24 * 60 * 60 * 1000
     });
 
-    console.log("Token sent in cookie for login.");
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
-    return response.success(res, "Login successful", { token, userId: user.userId, role: user.role });
+    console.log("Access token and refresh token sent in cookies.");
+
+    return response.success(res, "Login successful", { userId: user.userId, role: user.role });
 });
 
 module.exports.logoutController = catchAsyncError(async (req, res) => {
 
-    const token = req.cookies.token;
+    const token = req.cookies?.token;
+    const refreshToken = req.cookies?.refreshToken;
     // console.log("Loging out user with email:", req.user?.email);
 
-    if (!token) {
+    if (!token && !refreshToken) {
         return response.success(res, "User already logged out");
     }
 
     res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict"
+    });
+
+    res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict"
@@ -334,4 +369,202 @@ module.exports.resetPasswordController = catchAsyncError(async (req, res) => {
     console.log("Password reset successfully for email:", req.body.email);
 
     return response.success(res, "Password reset successful");
+});
+
+module.exports.resendOtpPasswordController = catchAsyncError(async (req, res) => {
+
+    const { email } = req.body;
+
+    console.log("Resend OTP request received for email:", email);
+
+    if (!email) {
+        console.log("Email missing in request.");
+        throw new AppError("Email is required", 400);
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    console.log("Searching user with email:", normalizedEmail);
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        console.log("No user found with email:", normalizedEmail);
+        throw new AppError("User not found", 404);
+    }
+
+    if (!user.isEmailVerified) {
+        console.log("User email is not verified:", normalizedEmail);
+        throw new AppError("Email is not verified", 400);
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const otpExpirationTime = new Date(Date.now() + 20 * 60 * 1000);
+
+    console.log(`Generated new OTP: ${otp} (expires at ${otpExpirationTime.toISOString()})`);
+
+    user.otp = otp;
+    user.otpExpirationTime = otpExpirationTime;
+    user.otpVerified = false;
+
+    const mailOptions = {
+        from: process.env.EMAIL,
+        to: normalizedEmail,
+        subject: "Email Verification - OTP",
+        text: `Dear ${user.firstName},
+
+Your new OTP is: ${otp}
+
+It is valid for 20 minutes.
+
+If you did not request this OTP, please ignore this email.
+
+Team Eventually.Co`
+    };
+
+    console.log("Sending OTP email...");
+
+    await Promise.all([
+        user.save(),
+        sendEmail(
+            mailOptions.to,
+            mailOptions.subject,
+            mailOptions.text
+        )
+    ]);
+
+    console.log("OTP resent successfully to:", normalizedEmail);
+
+    return response.success(res, "OTP resent successfully");
+});
+
+module.exports.resendOtpController = catchAsyncError(async (req, res) => {
+
+    const { email } = req.body;
+
+    console.log("Resend OTP request received for email:", email);
+
+    if (!email) {
+        console.log("Email missing in request.");
+        throw new AppError("Email is required", 400);
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    console.log("Searching user with email:", normalizedEmail);
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        console.log("No user found with email:", normalizedEmail);
+        throw new AppError("User not found", 404);
+    }
+
+    if (user.isEmailVerified) {
+        console.log("User email already verified:", normalizedEmail);
+        throw new AppError("Email is already verified", 400);
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const otpExpirationTime = new Date(Date.now() + 20 * 60 * 1000);
+
+    console.log(`Generated new OTP: ${otp} (expires at ${otpExpirationTime.toISOString()})`);
+
+    user.otp = otp;
+    user.otpExpirationTime = otpExpirationTime;
+    user.otpVerified = false;
+
+    const mailOptions = {
+        from: process.env.EMAIL,
+        to: normalizedEmail,
+        subject: "Email Verification - OTP",
+        text: `Dear ${user.firstName},
+
+Your new OTP is: ${otp}
+
+It is valid for 20 minutes.
+
+If you did not request this OTP, please ignore this email.
+
+Team Eventually.Co`
+    };
+
+    console.log("Sending OTP email...");
+
+    await Promise.all([
+        user.save(),
+        sendEmail(
+            mailOptions.to,
+            mailOptions.subject,
+            mailOptions.text
+        )
+    ]);
+
+    console.log("OTP resent successfully to:", normalizedEmail);
+
+    return response.success(res, "OTP resent successfully");
+
+});
+
+module.exports.refreshTokenController = catchAsyncError(async (req, res) => {
+
+    console.log("Refresh token request received.");
+
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+
+        console.log("Refresh token not found.");
+
+        throw new AppError("Refresh token is required", 401);
+    }
+
+    console.log("Verifying refresh token.");
+
+    const decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET
+    );
+
+    console.log("Refresh token verified for user:", decoded.id);
+
+    const user = await User.findOne({
+        userId: decoded.id
+    }).select("email role userId");
+
+    if (!user) {
+
+        console.log("User not found while refreshing token.");
+
+        throw new AppError("User not found", 404);
+    }
+
+    console.log("Generating new access token.");
+
+    const newAccessToken = jwt.sign(
+        {
+            email: user.email,
+            id: user.userId,
+            role: user.role,
+            _id: user._id
+        },
+        process.env.JWT_KEY,
+        {
+            expiresIn: "1d"
+        }
+    );
+
+    res.cookie("token", newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000
+    });
+
+    console.log("New access token issued.");
+
+    return response.success(res, "Access token refreshed successfully");
+
 });

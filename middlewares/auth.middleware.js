@@ -1,22 +1,28 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const AppError = require("@helpers/appError.helper");
+const catchAsyncError = require("@helpers/catchAsyncError.helper");
 
+module.exports.verifyToken = catchAsyncError(async (req, res, next) => {
 
-module.exports.verifyToken = (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
+    console.log("Auth Middleware Triggered.");
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(403).json({ message: 'No token provided' });
-    };
+    const token = req.cookies?.token;
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_KEY);
-    // console.log("decoded token :", decoded);
+    if (!token) {
+        throw new AppError("Authentication required. Please login.",401);
+    }
 
-    req.user = decoded; 
+    const decoded = jwt.verify(
+        token,
+        process.env.JWT_KEY
+    );
+
+    //console.log("Decoded Token :",decoded);
+
+    req.user = decoded;
+
+    console.log(`User authenticated successfully: ${decoded.id}`);
+
     next();
-  } catch (err) {
-    console.error('JWT Error:', err.message);
-    return res.status(401).json({ message: 'Invalid or expired token' });
-  };
-};
+
+});
