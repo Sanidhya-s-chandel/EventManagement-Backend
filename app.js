@@ -3,7 +3,7 @@ const passport = require("passport");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const notFound = require("./middlewares/notFound.middleware");
-const globalErrorHandler = require("./middlewares/error.middleware");
+const { globalErrorHandler } = require("@middlewares/index.middleware");
 const loadRoutes = require("./helpers/routeLoader");
 const morgan = require('morgan');
 const cors = require("cors");
@@ -11,8 +11,8 @@ const chalk = require('chalk');
 const app = express();
 
 // InBuild Middleware
-app.use(express.json({ limit: '50mb' })); 
-app.use(express.urlencoded({ extended: true, limit: '50mb' })); 
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());

@@ -25,7 +25,7 @@ module.exports.signUpController = catchAsyncError(async (req, res) => {
         pinCode
     };
 
-    console.log("Build up for addressObj :",addressObj);
+    console.log("Build up for addressObj :", addressObj);
 
     const [existingUser, newUserId] = await Promise.all([
         User.findOne({ email: email.toLowerCase() }).select("_id").lean(),
@@ -566,5 +566,25 @@ module.exports.refreshTokenController = catchAsyncError(async (req, res) => {
     console.log("New access token issued.");
 
     return response.success(res, "Access token refreshed successfully");
+
+});
+
+module.exports.testAuthController = catchAsyncError(async (req, res) => {
+
+    console.log("Test Auth Route Hit.");
+
+    console.log("Authenticated User:", req.user);
+
+    return response.success(res, "Authentication successful", req.user);
+
+});
+
+module.exports.getMe = catchAsyncError(async (req, res) => {
+
+    console.log("Fetching current user.");
+
+    const user = await User.findOne({ userId: req.user.id });
+
+    return response.success(res, "User fetched successfully", user);
 
 });
