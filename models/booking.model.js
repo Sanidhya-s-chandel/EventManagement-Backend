@@ -19,10 +19,15 @@ const BookingSchema = new mongoose.Schema(
             required: true
         },
 
+        paymentId: String,
+
+        transactionId: String,
+
         seats: [
             {
                 seatNumber: String,
-                row: String
+                row: String,
+                price: Number
             }
         ],
 

@@ -41,6 +41,7 @@ const loadRoutes = (app) => {
 
       } catch (moduleError) {
         console.log(chalk.red(`❌ Error loading module "${moduleName}": ${moduleError.message}`));
+        // console.log(moduleError)
       }
     });
 

@@ -1,4 +1,4 @@
-const { User } = require("@models/index.model");
+const { User, Event } = require("@models/index.model");
 const AppError = require("@helpers/AppError.helper");
 const catchAsyncError = require("@helpers/catchAsyncError.helper");
 
@@ -28,4 +28,46 @@ const generateUserId = async () => {
     return newUserId;
 };
 
-module.exports = { generateUserId };
+const generateEventId = async (category) => {
+
+    console.log(`Generating Event ID for category: ${category}`);
+
+    const categoryPrefix = {
+        music: "MUS",
+        workshop: "WRK",
+        sports: "SPT",
+        technology: "TEC",
+        comedy: "COM",
+        business: "BUS",
+        education: "EDU",
+        festival: "FES",
+        gaming: "GAM"
+    };
+
+    const prefix = categoryPrefix[category.toLowerCase()] || "EVT";
+
+    console.log(`Using prefix: ${prefix}`);
+
+    const lastEvent = await Event.findOne({ eventId: { $regex: `^${prefix}-\\d+$` } })
+        .sort({ createdAt: -1 })
+        .select("eventId")
+        .lean();
+
+    if (!lastEvent || !lastEvent.eventId) {
+
+        console.log(`No existing ${category} events found. Starting from ${prefix}-1000`);
+        return `${prefix}-1000`;
+    }
+
+    console.log(`Last Event Found: ${lastEvent.eventId}`);
+
+    const lastNumber = parseInt(lastEvent.eventId.split("-")[1], 10);
+
+    const newEventId = `${prefix}-${lastNumber + 1}`;
+
+    console.log(`Generated Event ID: ${newEventId}`);
+
+    return newEventId;
+};
+
+module.exports = { generateUserId, generateEventId };

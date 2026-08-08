@@ -26,14 +26,36 @@ const EventSchema = new mongoose.Schema({
     },
 
     category: {
-        type: String,
-        required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category"
     },
 
     location: {
-        type: String,
-        required: true,
+        venueName: String,
+        address: String,
+        city: String,
+        state: String,
+        country: String,
+        pincode: String,
+
+        coordinates: {
+
+            type: {
+                type: String,
+                enum: ["Point"],
+                default: "Point"
+            },
+
+            coordinates: {
+                type: [Number],
+                default: [0, 0]
+            }
+        }
     },
+
+    bannerImage: String,
+
+    galleryImages: [String],
 
     date: {
         type: Date,
@@ -64,9 +86,24 @@ const EventSchema = new mongoose.Schema({
                 type: String,
                 enum: ["available", "reserved", "booked"],
                 default: "available"
-            }
+            },
+            category: {
+                type: String,
+                enum: ["VIP", "Premium", "Regular"]
+            },
         }
     ],
+
+    approvalStatus: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending"
+    },
+
+    isPaid: {
+        type: Boolean,
+        default: false
+    },
 
     price: {
         type: Number,
@@ -95,8 +132,9 @@ const EventSchema = new mongoose.Schema({
 });
 
 EventSchema.index({ organizer: 1 });
-EventSchema.index({ eventDate: 1 });
+EventSchema.index({ Date: 1 });
 EventSchema.index({ category: 1 });
+EventSchema.index({ "location.coordinates": "2dsphere" });
 
 EventSchema.index({ title: "text", description: "text" });
 
