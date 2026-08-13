@@ -143,6 +143,8 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+UserSchema.index({ firstName: "text", lastName: "text", email: "text" });
+
 // UserSchema.index({ email: 1 });
 // UserSchema.index({ phone: 1 });
 

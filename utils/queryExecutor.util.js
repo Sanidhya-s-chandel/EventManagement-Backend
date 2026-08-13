@@ -5,6 +5,10 @@ module.exports = async (query, queryString) => {
 
     const skip = (page - 1) * limit;
 
+    console.log(`Page : ${page}, Limit : ${limit} and Skip : ${skip}`);
+
+    console.log("Query for DB :",query);
+
     const totalRecords = await query.model.countDocuments(
         query.getFilter()
     );

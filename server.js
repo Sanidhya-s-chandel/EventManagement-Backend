@@ -9,5 +9,5 @@ const PORT = process.env.PORT || 5500;
 
 app.listen(process.env.PORT, () => {
     console.log(`Server running at port: ${process.env.PORT}`);
-    console.log(`click the link to open : http://localhost:${process.env.PORT}`);
+    console.log(`click the link to open : http://localhost:${process.env.PORT}/api/v1`);
 });

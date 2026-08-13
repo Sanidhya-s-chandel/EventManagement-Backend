@@ -179,7 +179,7 @@ module.exports.loginController = catchAsyncError(async (req, res) => {
     }
 
     const token = jwt.sign(
-        { _id: user._id, email: user.email, id: user.userId, role: user.role },
+        { _id: user._id, email: user.email, id: user.userId, role: user.role, isAcitve: user.isActive },
         process.env.JWT_KEY,
         { expiresIn: "1d" }
     );

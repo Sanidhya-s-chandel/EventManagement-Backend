@@ -5,6 +5,7 @@ const { generateSeatLayout } = require("@helpers/generateSeatLayout.helper")
 const { generateEventId } = require("@helpers/customIdGenerator.helper");
 const { Event, Category } = require("@models/index.model");
 const queryExecutor = require("@utils/queryExecutor.util");
+const deleteFromCloudinary = require("@utils/cloudinaryDelete.service");
 
 
 module.exports.createEventController = catchAsyncError(async (req, res) => {
