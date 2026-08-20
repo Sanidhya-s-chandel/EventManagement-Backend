@@ -1,4 +1,4 @@
-const { User, Event } = require("@models/index.model");
+const { User, Event, Booking } = require("@models/index.model");
 const AppError = require("@helpers/AppError.helper");
 const catchAsyncError = require("@helpers/catchAsyncError.helper");
 
@@ -70,4 +70,31 @@ const generateEventId = async (category) => {
     return newEventId;
 };
 
-module.exports = { generateUserId, generateEventId };
+const generateBookingId = async () => {
+
+    try {
+        const lastBooking = await Booking.findOne({}).sort({ createdAt: -1 }).select("bookingId").lean();
+        console.log("Last Booking Found:", lastBooking?.bookingId || "None");
+
+        let nextNumber = 1;
+
+        if (lastBooking?.bookingId) {
+
+            const numericPart = parseInt(lastBooking.bookingId.replace("BKG-", ""), 10);
+
+            if (!isNaN(numericPart)) {
+                nextNumber = numericPart + 1;
+            }
+        }
+
+        console.log(`Next Booking Number: ${nextNumber}`);
+        return `BKG-${String(nextNumber).padStart(6, "0")}`;
+    } catch (error) {
+
+        console.error("❌ Failed to generate Booking ID:", error.message);
+        console.error(error.stack);
+        throw error;
+    }
+};
+
+module.exports = { generateUserId, generateEventId, generateBookingId };

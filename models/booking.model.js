@@ -4,6 +4,7 @@ const BookingSchema = new mongoose.Schema(
     {
         bookingId: {
             type: String,
+            required: true,
             unique: true
         },
 
@@ -25,13 +26,26 @@ const BookingSchema = new mongoose.Schema(
 
         seats: [
             {
-                seatNumber: String,
-                row: String,
-                price: Number
+                seatNumber: {
+                    type: String,
+                    required: true
+                },
+                row: {
+                    type: String,
+                    required: true
+                },
+                price: {
+                    type: String,
+                    required: true
+                }
             }
         ],
 
-        totalAmount: Number,
+        totalAmount: {
+            type: Number,
+            required: true,
+            min: 0
+        },
 
         paymentStatus: {
             type: String,
