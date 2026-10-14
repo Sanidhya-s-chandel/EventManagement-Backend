@@ -75,10 +75,17 @@ module.exports.signUpController = catchAsyncError(async (req, res) => {
         text: `Dear ${userObj?.firstName}, your userId is ${userObj.userId},\n\nThank you for registering with us.\n\nYour OTP is: ${otp}\n\nIt is valid for 20 minutes.\n\nTeam Eventally.Co.`,
     };
 
-    await Promise.all([
-        userObj.save(),
-        sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text),
-    ]);
+    // casues issues as it takes time to send email and save user, so we are not waiting for it to complete
+
+    // await Promise.all([
+    //     userObj.save(),
+    //     sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text),
+    // ]);
+
+    await userObj.save();
+    await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text);
+
+    console.log(`User created successfully with email: ${userObj.email}. OTP sent to email.`);
 
     const userData = userObj.toObject();
     delete userData.otp;
@@ -276,7 +283,9 @@ module.exports.forgotPasswordController = catchAsyncError(async (req, res) => {
         text: `Dear ${user.firstName},\n\nYou have requested to reset your password.\n\nYour One Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP will expire in 20 minutes.\n\nIf you did not request this, please ignore this email.\n\nBest regards,\nTeam Eventually.Co.`
     };
 
-    await Promise.all([user.save(), sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text)]);
+    // await Promise.all([user.save(), sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text)]);
+    await user.save();
+    await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.text);
 
     console.log(`OTP sent to ${email} for password reset.`);
 

@@ -414,7 +414,7 @@ module.exports.cancelBookingController = catchAsyncError(async (req, res) => {
             throw new AppError("Booking not found", 404);
         }
 
-        console.log(    `✅ Booking found: ${booking.bookingId}`    );
+        console.log(`✅ Booking found: ${booking.bookingId}`);
 
         const isAdminOrDev = userRole === "admin" || userRole === "dev";
 

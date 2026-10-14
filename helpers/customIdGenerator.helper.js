@@ -97,4 +97,31 @@ const generateBookingId = async () => {
     }
 };
 
-module.exports = { generateUserId, generateEventId, generateBookingId };
+const generatePaymentId = async () => {
+
+    try {
+        const lastPayment = await Payment.findOne({}).sort({ createdAt: -1 }).select("paymentId").lean();
+        console.log("Last Payment Found:", lastPayment?.paymentId || "None");
+
+        let nextNumber = 1;
+
+        if (lastPayment?.paymentId) {
+
+            const numericPart = parseInt(lastPayment.paymentId.replace("PAY-", ""), 10);
+
+            if (!isNaN(numericPart)) {
+                nextNumber = numericPart + 1;
+            }
+        }
+
+        console.log(`Next Payment Number: ${nextNumber}`);
+        return `PAY-${String(nextNumber).padStart(6, "0")}`;
+    } catch (error) {
+
+        console.error("❌ Failed to generate Payment ID:", error.message);
+        console.error(error.stack);
+        throw error;
+    }
+};
+
+module.exports = { generateUserId, generateEventId, generateBookingId, generatePaymentId };

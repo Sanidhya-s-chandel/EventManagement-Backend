@@ -7,6 +7,12 @@ const PaymentSchema = new mongoose.Schema(
             ref: "Booking"
         },
 
+        paymentId: {
+            type: String,
+            unique: true,
+            required: true
+        },
+
         user: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User"
@@ -19,11 +25,21 @@ const PaymentSchema = new mongoose.Schema(
             enum: ["card", "upi", "netbanking", "cash"]
         },
 
+        provider: {
+            type: String,
+            enum: ["razorpay", "stripe", "paypal","others"]
+        },
+
+        currency: {
+            type: String,
+            default: "INR"
+        },
+
         transactionId: String,
 
         status: {
             type: String,
-            enum: ["pending", "completed", "failed"],
+            enum: ["pending", "completed", "failed","refunded"],
             default: "pending"
         }
 
