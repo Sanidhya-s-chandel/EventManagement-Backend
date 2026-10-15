@@ -4,6 +4,7 @@ const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const notFound = require("./middlewares/notFound.middleware");
 const { globalErrorHandler } = require("@middlewares/index.middleware");
+const {cloudinaryCleanup} = require("@middlewares/cloudinaryCleanup.middleware");
 const loadRoutes = require("./helpers/routeLoader");
 const morgan = require('morgan');
 const cors = require("cors");
@@ -42,6 +43,8 @@ app.use(morgan((tokens, req, res) => {
 }));
 
 loadRoutes(app);
+
+app.use(cloudinaryCleanup);
 
 app.use(notFound);
 app.use(globalErrorHandler);

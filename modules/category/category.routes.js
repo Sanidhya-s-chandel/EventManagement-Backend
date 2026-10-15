@@ -8,8 +8,8 @@ router.get("/", verifyToken, getAllCategoriesController);
 
 router.post("/create", verifyToken, authorizeRoles("admin"), upload.single("icons"), createCategoryController);
 
-router.put("/:id", verifyToken, authorizeRoles("admin"), upload.single("icons"), updateCategory);
+router.put("/:categoryId", verifyToken, authorizeRoles("admin"), upload.single("icons"), updateCategory);
 
-router.delete("/:id", verifyToken, authorizeRoles("admin"), deleteCategoryController);
+router.delete("/:categoryId", verifyToken, authorizeRoles("admin"), deleteCategoryController);
 
 module.exports = router;

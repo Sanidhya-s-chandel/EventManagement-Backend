@@ -1,7 +1,7 @@
 const response = require("@helpers/response.helper");
 const AppError = require("@helpers/AppError.helper");
 const catchAsyncError = require("@helpers/catchAsyncError.helper");
-const { Category } = require("@models/index.model");
+const { Category, Event } = require("@models/index.model");
 const deleteFromCloudinary = require("@utils/cloudinaryDelete.service");
 
 module.exports.createCategoryController = catchAsyncError(async (req, res) => {
@@ -101,14 +101,25 @@ module.exports.updateCategory = catchAsyncError(async (req, res) => {
         category.description = description.trim();
     }
 
-    if (req.file?.path) {
+    const oldIcon = category.icon;
+    const newIcon = req.file?.path;
 
+    if (newIcon) {
         console.log("Updating category icon...");
-        category.icon = req.file.path;
+        category.icon = newIcon;
     }
-
-    console.log("Saving updated category...");
+    
     await category.save();
+
+    if (newIcon && oldIcon && oldIcon !== newIcon) {
+        try {
+            console.log("Deleting old category icon from Cloudinary...");
+            await deleteFromCloudinary(oldIcon);
+            console.log("Old icon deleted successfully.");
+        } catch (error) {
+            console.error("Failed to delete old icon:", error);
+        }
+    }
 
     console.log(` Category updated successfully`);
     return response.success(res, "Category updated successfully", category);

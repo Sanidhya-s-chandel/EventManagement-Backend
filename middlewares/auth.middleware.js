@@ -23,7 +23,7 @@ module.exports.verifyToken = catchAsyncError(async (req, res, next) => {
 
     console.log(`User decoded successfully: ${decoded.id}`);
 
-    const user = await User.findById(decoded.id)
+    const user = await User.findById(decoded._id)
         .select("_id userId firstName lastName email role isAdmin isActive profileImage")
         .lean();
 
