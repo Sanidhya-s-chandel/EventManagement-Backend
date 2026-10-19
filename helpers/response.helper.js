@@ -1,18 +1,18 @@
 class Response {
 
-  static success(res, message = "Success", data = null, status = 200) {
-    return res.status(status).json({
+  static success(res, message = "Success", data) {
+    return res.status(200).json({
       success: true,
       message,
-      data
+      ...(data !== undefined && { data })
     });
   }
 
-  static created(res, message = "Resource created", data = null) {
+  static created(res, message = "Resource created", data) {
     return res.status(201).json({
       success: true,
       message,
-      data
+      ...(data !== undefined && { data })
     });
   }
 

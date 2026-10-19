@@ -25,6 +25,10 @@ const getUploadedFiles = (req) => {
 module.exports.cloudinaryCleanup = async (err, req, res, next) => {
     const files = getUploadedFiles(req);
 
+    if (files.length === 0) {
+        return next(err);
+    }
+
     try {
         await Promise.all(
             files.map((file) =>
@@ -39,5 +43,5 @@ module.exports.cloudinaryCleanup = async (err, req, res, next) => {
         console.error("Cloudinary cleanup failed:", cleanupError);
     }
 
-    next(err);
+    return next(err);
 };

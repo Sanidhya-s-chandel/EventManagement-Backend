@@ -7,6 +7,7 @@ const { Event, Category } = require("@models/index.model");
 const queryExecutor = require("@utils/queryExecutor.util");
 const deleteFromCloudinary = require("@utils/cloudinaryDelete.service");
 
+const DEFAULT_EVENT_FIELDS = ["title", "description", "category", "organizer", "date", "time", "location", "isPaid", "approvalStatus", "createdAt"].join(" ");
 
 module.exports.createEventController = catchAsyncError(async (req, res) => {
     console.log("New Event is being created...");
@@ -144,7 +145,7 @@ module.exports.getEventController = catchAsyncError(async (req, res) => {
 
 module.exports.getAllEventController = catchAsyncError(async (req, res) => {
 
-    const { search, category, isPaid, approvalStatus, sort } = req.query;
+    const { search, category, isPaid, approvalStatus, sort, fields } = req.query;
 
     const filter = {};
 
@@ -174,11 +175,13 @@ module.exports.getAllEventController = catchAsyncError(async (req, res) => {
         ];
     }
 
+    const selectedFields = fields || DEFAULT_EVENT_FIELDS;
+
     const query = Event.find(filter)
         .sort(sort || "-createdAt")
         .populate("category", "name icon")
         .populate("organizer", "firstName lastName profileImage")
-        .select(EVENT_CARD_FIELDS)
+        .select(selectedFields)
         .lean();
 
     const result = await queryExecutor(query, req.query);
@@ -257,18 +260,17 @@ module.exports.updateEventController = catchAsyncError(async (req, res) => {
         updateData.date = eventDate;
     }
 
-    if (category) {
 
+    if (category) {
         console.log("Validating category...");
 
-        const categoryExists = await Category.exists({ name: category });
+        const categoryDoc = await Category.findOne({ name: category.trim() }).select("_id").lean();
 
-        if (!categoryExists) {
-            console.log("❌ Invalid category selected.");
+        if (!categoryDoc) {
             throw new AppError("Invalid category selected.", 404);
         }
 
-        updateData.category = category;
+        updateData.category = categoryDoc._id;
     }
 
     try {
@@ -282,46 +284,70 @@ module.exports.updateEventController = catchAsyncError(async (req, res) => {
         throw new AppError("Invalid location payload.", 400);
     }
 
-    if (req.files?.bannerImage) {
+    const imagesToDelete = [];
 
+    if (req.files?.bannerImage?.length) {
         console.log("Updating banner image...");
-        await deleteFromCloudinary(event.bannerImage);
+
+        if (event.bannerImage) {
+            imagesToDelete.push(event.bannerImage);
+        }
 
         updateData.bannerImage = req.files.bannerImage[0].path;
-
     }
 
-    if ("galleryImagesToKeep" in req.body) {
-
+    if (
+        Object.prototype.hasOwnProperty.call(req.body, "galleryImagesToKeep") || req.files?.galleryImages?.length
+    ) {
         console.log("Processing gallery image update...");
 
         let galleryImagesToKeep = req.body.galleryImagesToKeep;
+        const existingGallery = event.galleryImages || [];
 
-        if (typeof galleryImagesToKeep === "string") {
+        if (typeof galleryImagesToKeep === "undefined") {
+            galleryImagesToKeep = existingGallery;
+        }
 
-            galleryImagesToKeep = JSON.parse(galleryImagesToKeep);
+        try {
+            if (typeof galleryImagesToKeep === "string") {
+                galleryImagesToKeep = JSON.parse(galleryImagesToKeep);
+            }
+        } catch {
+            throw new AppError("Invalid galleryImagesToKeep JSON format.", 400);
+        }
+
+        if (!Array.isArray(galleryImagesToKeep) || !galleryImagesToKeep.every(image => typeof image === "string")
+        ) {
+            throw new AppError("galleryImagesToKeep must be an array of image URLs.", 400);
+        }
+
+        const invalidImages = galleryImagesToKeep.filter(image => !existingGallery.includes(image));
+
+        if (invalidImages.length > 0) {
+            throw new AppError("One or more gallery images do not belong to this event.", 400);
         }
 
         const newGalleryImages = req.files?.galleryImages?.map(file => file.path) || [];
 
-        if (galleryImagesToKeep.length === 0 && newGalleryImages.length === 0) {
-
-            console.log("❌ Event must contain at least one gallery image.");
-            throw new AppError("At least one gallery image is required.", 400);
-        }
-
-        const imagesToDelete = event.galleryImages.filter(image => !galleryImagesToKeep.includes(image));
-
-        if (imagesToDelete.length) {
-
-            console.log(`Deleting ${imagesToDelete.length} gallery image(s)...`);
-            await Promise.all(imagesToDelete.map(image => deleteFromCloudinary(image)));
-        }
-
-        updateData.galleryImages = [
+        const updatedGalleryImages = [
             ...galleryImagesToKeep,
             ...newGalleryImages
         ];
+
+        if (updatedGalleryImages.length === 0) {
+            throw new AppError("At least one gallery image is required.", 400);
+        }
+
+        const imagesToRemove = existingGallery.filter(image => !galleryImagesToKeep.includes(image));
+
+        console.log("Existing gallery:", existingGallery);
+        console.log("Gallery images to keep:", galleryImagesToKeep);
+        console.log("Gallery images to remove:", imagesToRemove);
+        console.log("New gallery uploads:", newGalleryImages);
+
+        imagesToDelete.push(...imagesToRemove);
+
+        updateData.galleryImages = updatedGalleryImages;
     }
 
     console.log("Applying updates...");
@@ -331,6 +357,22 @@ module.exports.updateEventController = catchAsyncError(async (req, res) => {
     console.log("Saving updated event...");
 
     await event.save();
+
+    console.log(`✅ Event Updated Successfully: ${event.eventId}`);
+
+    console.log("Cleaning up old Cloudinary images...");
+
+    const uniqueImagesToDelete = [...new Set(imagesToDelete)];
+
+    const deletionResults = await Promise.allSettled(uniqueImagesToDelete.map(image => deleteFromCloudinary(image)));
+
+    deletionResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+            console.log(`✅ Old image cleanup attempted: ${uniqueImagesToDelete[index]}`);
+        } else {
+            console.error(`❌ Failed to delete old image: ${uniqueImagesToDelete[index]}`, result.reason);
+        }
+    });
 
     console.log(`✅ Event Updated Successfully: ${event.eventId}`);
 
@@ -388,4 +430,40 @@ module.exports.deleteEventController = catchAsyncError(async (req, res) => {
     console.log(`✅ Event Deleted Successfully: ${requestedEventId}`);
 
     return response.success(res, "Event deleted successfully.");
+});
+
+module.exports.approveEventController = catchAsyncError(async (req, res) => {
+    console.log("APPROVE EVENT REQUEST");
+
+    const { eventId: requestedEventId } = req.params;
+
+    if (!requestedEventId?.trim()) {
+        console.log("❌ Event ID not provided.");
+        throw new AppError("Event ID is required.", 400);
+    }
+
+    console.log(`Requested Event ID: ${requestedEventId}`);
+
+    console.log("Searching for event...");
+
+    const event = await Event.findOne({ eventId: requestedEventId });
+
+    if (!event) {
+        console.log("❌ Event not found.");
+        throw new AppError("Event not found.", 404);
+    }
+
+    console.log(`✅ Event Found: ${event.title}`);
+
+    if (event.approvalStatus === "approved") {
+        console.log("❌ Event is already approved.");
+        throw new AppError("Event is already approved.", 400);
+    }
+
+    event.approvalStatus = "approved";
+    await event.save();
+
+    console.log(`✅ Event Approved Successfully: ${requestedEventId}`);
+
+    return response.success(res, "Event approved successfully.", event);
 });

@@ -4,6 +4,8 @@ const generateSeatLayout = (rowConfig, pricingConfig) => {
 
     const seats = [];
 
+    console.log("Row Configuration:", rowConfig);
+
     rowConfig.forEach(({ row, category, seats: seatCount }) => {
 
         const price = pricingConfig[category];
